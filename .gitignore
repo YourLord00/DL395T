@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+
+# Large model files
+*.pth
+
+# OS
+.DS_Store
+
+# Submissions
+*.zip
+
+# Claude
+.claude/
