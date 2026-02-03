@@ -4,9 +4,6 @@ __pycache__/
 *.so
 *.egg-info/
 
-# Large model files
-*.pth
-
 # OS
 .DS_Store
 
