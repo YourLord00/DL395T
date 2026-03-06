@@ -10,5 +10,11 @@ __pycache__/
 # Submissions
 *.zip
 
+# Data
+data/
+
+# VSCode
+.vscode/
+
 # Claude
 .claude/

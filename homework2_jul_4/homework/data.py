@@ -46,3 +46,39 @@ class TokenDataset(torch.utils.data.TensorDataset):
 
     def __len__(self) -> int:
         return len(self.data)
+
+
+if __name__ == "__main__":
+    # Debug ImageDataset Testing
+    print("=== ImageDataset ===")
+    print(f"DATASET_PATH: {DATASET_PATH}")
+    print(f"DATASET_PATH exists: {DATASET_PATH.exists()}")
+
+    ds = ImageDataset("train")
+    print(f"Number of images: {len(ds)}")
+    print(f"First 5 paths: {ds.image_paths[:5]}")
+
+    img = ds[0]
+    print(f"Image type: {type(img)}")
+    print(f"Image shape: {img.shape}")  # (H, W, C)
+    print(f"Image dtype: {img.dtype}")
+    print(f"Min: {img.min()}, Max: {img.max()}")
+    print(f"First pixel: {img[0, 0]}")
+
+    # Debug TokenDataset Testing
+    print("\n=== TokenDataset ===")
+    try:
+        tds = TokenDataset("train")
+        print(f"Number of samples: {len(tds)}")
+        print(f"Raw data type: {type(tds.data)}")
+        print(f"Raw data shape: {tds.data.shape}")
+        print(f"Raw data dtype: {tds.data.dtype}")
+
+        token = tds[0]  # __getitem__
+        print(f"Token type: {type(token)}")
+        print(f"Token shape: {token.shape}")  # (h, w) token grid per image
+        print(f"Token dtype: {token.dtype}")
+        print(f"Min: {token.min()}, Max: {token.max()}")
+        print(f"First 10 tokens: {token.flatten()[:10]}")
+    except FileNotFoundError as e:
+        print(f"TokenDataset not available: {e}")
