@@ -13,6 +13,9 @@ __pycache__/
 # Data
 data/
 
+# Training logs
+logs/
+
 # VSCode
 .vscode/
 
