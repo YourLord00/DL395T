@@ -105,7 +105,26 @@ class BaseLLM:
                 for r in self.batched_generate(prompts[idx : idx + micro_batch_size], num_return_sequences, temperature)
             ]
 
-        raise NotImplementedError()
+        self.tokenizer.padding_side = "left"
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        inputs = self.tokenizer(prompts, return_tensors="pt", padding=True).to(self.device)
+        outputs = self.model.generate(
+            **inputs,
+            max_new_tokens=50,
+            do_sample=temperature > 0,
+            temperature=temperature if temperature > 0 else None,
+            num_return_sequences=1 if num_return_sequences is None else num_return_sequences,
+            eos_token_id=self.tokenizer.eos_token_id,
+        )
+
+        tokens = outputs[:, inputs["input_ids"].shape[1]:]
+
+        decoded_results = self.tokenizer.batch_decode(tokens, skip_special_tokens=True)
+
+        return decoded_results if num_return_sequences is None else [
+            decoded_results[i : i + num_return_sequences] for i in range(0, len(decoded_results), num_return_sequences)
+        ]
+        
 
     def answer(self, *questions) -> list[float]:
         """
