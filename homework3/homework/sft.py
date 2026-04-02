@@ -29,7 +29,7 @@ def tokenize(tokenizer, question: str, answer: str):
 
     tokenizer.padding_side = "right"
     tokenizer.pad_token = tokenizer.eos_token
-    full = tokenizer(full_text, padding="max_length", truncation=True, max_length=128)
+    full = tokenizer(full_text, padding="max_length", truncation=True, max_length=256)
 
     input_ids = full["input_ids"]
     question_len = len(tokenizer(question)["input_ids"])
@@ -49,7 +49,12 @@ def format_example(prompt: str, answer: str) -> dict[str, str]:
     """
     Construct a question / answer pair. Consider rounding the answer to make it easier for the LLM.
     """
-    raise NotImplementedError()
+    
+    return {
+        "question": prompt,                          
+        "answer": f"<answer>{round(answer, 2)}</answer>",  
+    }
+
 
 
 class TokenizedDataset:
@@ -78,7 +83,44 @@ def train_model(
     output_dir: str,
     **kwargs,
 ):
-    raise NotImplementedError()
+    from peft import get_peft_model, LoraConfig
+
+    llm = BaseLLM()
+    lora_config = LoraConfig(
+        r=4,
+        lora_alpha=20,
+        target_modules="all-linear",
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+    model = get_peft_model(llm.model, lora_config)
+    model.enable_input_require_grads()
+
+    # dataloader
+    train_data = Dataset("train")
+    tokenized_dataset = TokenizedDataset(llm.tokenizer, train_data, format_example)
+
+    from transformers import Trainer, TrainingArguments
+
+    #config
+    args = TrainingArguments(
+        num_train_epochs=5,
+        per_device_train_batch_size=32,
+        learning_rate=4e-4,
+        gradient_checkpointing=False,
+        report_to="tensorboard",
+        output_dir=output_dir,
+        logging_dir=output_dir,
+
+    )
+
+    # train
+    trainer = Trainer(model=model, args=args, train_dataset=tokenized_dataset)
+    trainer.train()
+
+    #save
+    model.save_pretrained(output_dir)
+
     test_model(output_dir)
 
 
