@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual env / caches
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Training artifacts
+homework/vlm_model/
+homework/vlm_sft/
+homework/clip_model/
+homework/demo_train/
+**/checkpoint-*/
+**/tensorboard/
+events.out.tfevents.*
+*.tfevents.*
+training_args.bin
+
+# Generated data
+data/train/*_qa_pairs.json
+data/train/*_captions.json
+data/*.zip
+
+# Submission artifacts
+*.zip
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

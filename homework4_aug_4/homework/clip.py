@@ -96,13 +96,16 @@ class CaptionDatasetForTraining(Dataset):
 
 class CLIP(nn.Module):
     def __init__(
-        self, vision_encoder: nn.Module, text_encoder: nn.Module, proj_dim: int = 64, temperature: float = 0.07
+        self, vision_encoder: nn.Module, text_encoder: nn.Module, proj_dim: int = 256, temperature: float = 0.07
     ):
         super().__init__()
         self.vision_encoder = vision_encoder
         self.text_encoder = text_encoder
+
         # TODO: implement the rest components
-        raise NotImplementedError("Not implemented")
+        self.vision_projection = nn.Linear(vision_encoder.config.hidden_size, proj_dim)
+        self.text_projection = nn.Linear(text_encoder.config.hidden_size, proj_dim)
+        self.logit_scale = nn.Parameter(torch.log(torch.tensor(1.0 / temperature)))
 
     def encode_image(self, image: torch.Tensor) -> torch.Tensor:
         return self.vision_encoder(image)
@@ -180,7 +183,29 @@ class CLIP(nn.Module):
         Returns:
             TODO: think about the what values should be returned
         """
-        raise NotImplementedError("Not implemented")
+
+        # vision
+        vision_outputs = self.vision_encoder(pixel_values)
+        vision_hidden = vision_outputs.last_hidden_state # (B, 144, 768)
+        vision_pooled = vision_hidden.mean(dim=1) # (B, 768)
+
+        vision_feature = self.vision_projection(vision_pooled)
+        vision_feature = vision_feature / vision_feature.norm(dim=-1, keepdim=True)
+
+        # text
+        text_outputs = self.text_encoder(input_ids=input_ids, attention_mask=attention_mask)
+        text_hidden = text_outputs.last_hidden_state # (B, L, 576)
+        # count the actual sequence lengths for each item in the batch (excluding padding)
+        seq_lens = attention_mask.sum(dim=1) - 1
+
+        batch_indices = torch.arange(text_hidden.size(0), device=text_hidden.device)
+        text_pooled = text_hidden[batch_indices, seq_lens] # (B, 576)
+
+        text_feature = self.text_projection(text_pooled) # (B, proj_dim)
+        text_feature = text_feature / text_feature.norm(dim=-1, keepdim=True)
+        logits = self.logit_scale.exp() * vision_feature @ text_feature.T # (B, B)
+
+        return vision_feature, text_feature, logits
 
 
 def compute_clip_loss(
@@ -199,7 +224,22 @@ def compute_clip_loss(
     Returns:
         The loss for the CLIP model.
     """
-    raise NotImplementedError("Not implemented")
+
+    vision_feature, text_feature, logits = outputs
+    B = logits.shape[0]
+    targets = torch.arange(B, device=logits.device)
+
+    # log_probs = logits.log_softmax(dim=-1)
+    # log_probs[torch.arange(B), targets].mean()
+
+    log_probs_i2t = logits.log_softmax(dim=-1)
+    loss_i2t = -log_probs_i2t[torch.arange(B), targets].mean()
+
+    log_probs_t2i = logits.log_softmax(dim=0)
+    loss_t2i = -log_probs_t2i[targets, torch.arange(B)].mean()
+
+    return (loss_i2t + loss_t2i) / 2
+
 
 
 def get_target_modules_for_lora(model: nn.Module) -> list[str]:

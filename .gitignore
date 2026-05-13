@@ -16,6 +16,9 @@ data/
 # Training logs
 logs/
 
+# Models
+homework4_aug_4/models/
+
 # VSCode
 .vscode/
 
